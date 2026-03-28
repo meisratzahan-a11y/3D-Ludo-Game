@@ -1,0 +1,29 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Cordova
+        run: npm install -g cordova
+
+      - name: Create Project
+        run: |
+          cordova create ludo com.ludo.game LudoGame
+          cd ludo
+          cordova platform add android
+          cp ../index.html www/index.html
+          cordova build android
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: Ludo-APK
+          path: ludo/platforms/android/app/build/outputs/apk/debug/app-debug.apk
