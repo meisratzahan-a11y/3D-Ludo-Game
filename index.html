@@ -1,1 +1,610 @@
+03.28 7:38 PM
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>3D Ludo - Mobile Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
 
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #1a1a1a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #gameContainer {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        #canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        /* UI Overlay */
+        #uiOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* Loading Screen */
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            pointer-events: all;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 18px;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+
+        /* HUD - Top Info */
+        .hud-top {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            height: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: auto;
+            z-index: 200;
+        }
+
+        .turn-indicator {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            border: 2px solid;
+        }
+
+        .turn-indicator.p1 { border-color: #ff6b6b; }
+        .turn-indicator.p2 { border-color: #4ecdc4; }
+        .turn-indicator.p3 { border-color: #ffe66d; }
+        .turn-indicator.p4 { border-color: #95e1d3; }
+
+        .settings-btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .settings-btn:active {
+            transform: scale(0.95);
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        /* HUD - Bottom Controls */
+        .hud-bottom {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            pointer-events: auto;
+            z-index: 200;
+        }
+
+        .dice-display {
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px solid #667eea;
+            border-radius: 12px;
+            padding: 15px 30px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            min-width: 120px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .dice-display.can-roll {
+            border-color: #51cf66;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(81, 207, 102, 0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(81, 207, 102, 0); }
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 100%;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+            box-shadow: 0 8px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(100, 100, 100, 0.7);
+            color: white;
+            border: 2px solid #666;
+        }
+
+        .btn-secondary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-danger {
+            background: rgba(255, 107, 107, 0.7);
+            color: white;
+            border: 2px solid #ff6b6b;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Settings Panel */
+        #settingsPanel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+            pointer-events: auto;
+        }
+
+        #settingsPanel.show {
+            display: flex;
+        }
+
+        .settings-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 90%;
+            min-width: 250px;
+            border: 2px solid #667eea;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .settings-title {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .settings-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 16px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 30px;
+            background: #444;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #51cf66;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: left 0.3s;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            left: 23px;
+        }
+
+        .settings-button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        /* Game Over Modal */
+        #gameOverModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 400;
+            pointer-events: auto;
+        }
+
+        #gameOverModal.show {
+            display: flex;
+        }
+
+        .game-over-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 85%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+            animation: popIn 0.5s ease-out;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .winner-text {
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .winner-emoji {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .game-stats {
+            color: white;
+            font-size: 16px;
+            margin: 20px 0;
+            line-height: 1.8;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* Score Board */
+        .score-board {
+            position: absolute;
+            top: 80px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 12px;
+            padding: 15px;
+            min-width: 180px;
+            backdrop-filter: blur(10px);
+            pointer-events: auto;
+            z-index: 200;
+            display: none;
+        }
+
+        .score-board.show {
+            display: block;
+        }
+
+        .score-item {
+            color: white;
+            font-size: 13px;
+            margin: 8px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .score-item:last-child {
+            border-bottom: none;
+        }
+
+        .score-value {
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        /* Responsive */
+        @media (max-height: 600px) {
+            .hud-bottom {
+                bottom: 10px;
+                gap: 10px;
+            }
+
+            button {
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+
+            .dice-display {
+                padding: 10px 20px;
+                font-size: 20px;
+            }
+        }
+
+        /* Touch feedback */
+        .tap-feedback {
+            animation: tapFeedback 0.3s ease-out;
+        }
+
+        @keyframes tapFeedback {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* Particle Effect Container */
+        #particleContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 150;
+        }
+
+        .particle {
+            position: absolute;
+            pointer-events: none;
+        }
+
+        /* Notification Toast */
+        .notification {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            z-index: 250;
+            pointer-events: none;
+            animation: slideUp 0.3s ease-out;
+            backdrop-filter: blur(10px);
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateX(-50%) translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Dark Mode */
+        body.dark-mode {
+            background: #0a0a0a;
+        }
+
+        body.dark-mode .hud-top {
+            filter: brightness(0.9);
+        }
+
+        /* Player Colors */
+        .player-color-p1 { color: #ff6b6b; }
+        .player-color-p2 { color: #4ecdc4; }
+        .player-color-p3 { color: #ffe66d; }
+        .player-color-p4 { color: #95e1d3; }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="canvas"></canvas>
+        <div id="uiOverlay"></div>
+
+        <!-- Loading Screen -->
+        <div id="loadingScreen">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">প্রস্তুতি নিচ্ছি...</div>
+        </div>
+
+        <!-- HUD -->
+        <div class="hud-top">
+            <div class="turn-indicator p1" id="turnIndicator">খেলোয়াড় ১ এর পালা</div>
+            <button class="settings-btn" id="settingsBtn">⚙️</button>
+        </div>
+
+        <div class="score-board" id="scoreBoard">
+            <div style="color: #667eea; font-weight: bold; margin-bottom: 10px;">স্কোর বোর্ড</div>
+            <div class="score-item"><span class="player-color-p1">খেলোয়াড় ১</span><span class="score-value" id="score-p1">0</span></div>
+            <div class="score-item"><span class="player-color-p2">খেলোয়াড় ২</span><span class="score-value" id="score-p2">0</span></div>
+            <div class="score-item"><span class="player-color-p3">খেলোয়াড় ৩</span><span class="score-value" id="score-p3">0</span></div>
+            <div class="score-item"><span class="player-color-p4">খেলোয়াড় ৪</span><span class="score-value" id="score-p4">0</span></div>
+        </div>
+
+        <div class="hud-bottom">
+            <div class="dice-display" id="diceDisplay">ডাইস: -</div>
+            <div class="control-buttons">
+                <button class="btn-primary" id="rollDiceBtn" disabled>ডাইস ঘোরান</button>
+                <button class="btn-secondary" id="toggleScoreBtn">স্কোর</button>
+                <button class="btn-danger" id="restartBtn">নতুন খেলা</button>
+            </div>
+        </div>
+
+        <!-- Settings Panel -->
+        <div id="settingsPanel">
+            <div class="settings-content">
+                <div class="settings-title">সেটিংস</div>
+                
+                <div class="settings-option">
+                    <span>সাউন্ড</span>
+                    <div class="toggle-switch active" id="soundToggle">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="settings-option">
+                    <span>সঙ্গীত</span>
+                    <div class="toggle-switch active" id="musicToggle">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="settings-option">
+                    <span>অন্ধকার মোড</span>
+                    <div class="toggle-switch active" id="darkModeToggle">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="settings-option">
+                    <span>কম্পন প্রতিক্রিয়া</span>
+                    <div class="toggle-switch active" id="vibrationToggle">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="settings-button-group">
+                    <button class="btn-primary" id="settingsCloseBtn">বন্ধ করুন</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div id="gameOverModal">
+            <div class="game-over-content">
+                <div class="winner-emoji" id="winnerEmoji"></div>
+                <div class="winner-text" id="winnerText">খেলোয়াড় ১ জিতেছে!</div>
+                <div class="game-stats" id="gameStats"></div>
+                <div class="modal-buttons">
+                    <button class="btn-primary" id="playAgainBtn">আবার খেলুন</button>
+                    <button class="btn-secondary" id="exitGameBtn">বের হন</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Particle Container -->
+        <div id="particleContainer"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ============================================
+        // GAME CONFIGURATION & CONSTANTS
+        // ============================================
+        
+        const 
